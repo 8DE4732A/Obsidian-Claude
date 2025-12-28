@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-claude-code",
+  "name": "Obsidian Claude Code",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Integrate Claude Code into Obsidian. Chat with Claude in the sidebar and let it read, edit, create, and search files in your vault.",
+  "author": "8de4732a",
+  "authorUrl": "https://github.com/8de4732a",
+  "fundingUrl": "",
+  "isDesktopOnly": true
+}
