@@ -28,12 +28,6 @@ jobs:
       - name: Build plugin
         run: npm run build
 
-      - name: Create release zip
-        run: |
-          mkdir -p release
-          cp main.js manifest.json styles.css release/
-          cd release && zip -r ../obsidian-claude-code-${{ github.event.inputs.version }}.zip .
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -42,7 +36,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            obsidian-claude-code-${{ github.event.inputs.version }}.zip
             main.js
             manifest.json
             styles.css
