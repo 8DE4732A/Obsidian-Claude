@@ -1,8 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
 import type ClaudeAgentPlugin from '../main';
-import { ChatSession, ChatMessage } from '../types';
+import { ChatSession, ChatMessage, UsageStats } from '../types';
 
 const SESSIONS_KEY = 'claude-agent-sessions';
+
+// Default empty usage stats
+const DEFAULT_USAGE: UsageStats = {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    estimatedCost: 0
+};
 
 export class SessionManager {
     private plugin: ClaudeAgentPlugin;
@@ -31,6 +39,10 @@ export class SessionManager {
 
         this.sessions.clear();
         sessionsData.forEach((session: ChatSession) => {
+            // Ensure usage field exists for legacy sessions
+            if (!session.usage) {
+                session.usage = { ...DEFAULT_USAGE };
+            }
             this.sessions.set(session.id, session);
         });
     }
@@ -63,7 +75,8 @@ export class SessionManager {
             title: 'New Conversation',
             messages: [],
             createdAt: Date.now(),
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            usage: { ...DEFAULT_USAGE }
         };
 
         this.sessions.set(session.id, session);
@@ -152,6 +165,22 @@ export class SessionManager {
         const session = this.sessions.get(localId);
         if (session) {
             session.sessionId = sdkSessionId;
+            await this.persistSessions();
+        }
+    }
+
+    /**
+     * Update usage statistics for a session
+     */
+    async updateUsage(sessionId: string, usage: UsageStats): Promise<void> {
+        await this.ensureLoaded();
+        const session = this.sessions.get(sessionId);
+        if (session) {
+            // Accumulate usage
+            session.usage.inputTokens += usage.inputTokens;
+            session.usage.outputTokens += usage.outputTokens;
+            session.usage.totalTokens += usage.totalTokens;
+            session.usage.estimatedCost += usage.estimatedCost;
             await this.persistSessions();
         }
     }

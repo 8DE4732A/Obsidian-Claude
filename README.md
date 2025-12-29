@@ -2,45 +2,75 @@
 
 An Obsidian plugin that integrates Claude Code capabilities into your vault through a chat interface in the sidebar.
 
+![Screenshot](screenshot.jpeg)
+
 ## Features
 
-- Chat with Claude directly in Obsidian's right sidebar
-- Claude can read, edit, create, and search files in your vault
-- Uses Claude Code's built-in tools (Read, Edit, Write, Glob, Grep)
-- Session management with conversation history
-- Streaming responses for real-time feedback
-- Supports third-party API providers (AWS Bedrock, Google Vertex AI, Azure)
+- **Chat with Claude** - Directly in Obsidian's right sidebar
+- **File Operations** - Claude can read, edit, create, and search files in your vault
+- **Context Awareness** - Auto-includes current file and selected text in conversations
+- **@ Mentions** - Quick file/folder path autocomplete with `@`
+- **Environment Templates** - Switch between multiple API configurations
+- **Session Management** - Conversation history with token usage tracking
+- **Streaming Responses** - Real-time feedback as Claude responds
+- **Slash Commands** - `/compact`, `/clear`, `/help` and more
+- **Third-Party Providers** - AWS Bedrock, Google Vertex AI support
+
+## Quick Start
+
+1. Install and enable the plugin
+2. Go to Settings > Claude Code > Environment Templates
+3. Create a template and add `ANTHROPIC_API_KEY`
+4. Open the chat panel (click ribbon icon or use command palette)
+5. Start chatting!
+
+## Usage
+
+### Basic Chat
+
+Type your message and press `Enter` to send. Claude will respond and can interact with your vault files.
+
+### Context Features
+
+- **Current File Context** - The file you're editing is automatically included
+- **Selected Text** - Select text in the editor, it will be sent to Claude
+- **@ Mentions** - Type `@` to search and insert file/folder paths
+
+### Session Management
+
+- Use the dropdown at the top to switch sessions
+- Click `+` to create a new session
+- Token usage and cost are displayed per session
+
+### Environment Templates
+
+Switch between different API configurations (e.g., different models, providers) using the selector at the bottom-left of the input box.
 
 ## Requirements
 
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed on your system
-- An Anthropic API key (or configured third-party provider)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed
+- Anthropic API key (or configured third-party provider)
 - Obsidian desktop app (not mobile)
 
 ## Installation
 
 ### From Source
 
-1. Clone this repository into your vault's `.obsidian/plugins/` folder:
-   ```bash
-   cd /path/to/your/vault/.obsidian/plugins/
-   git clone https://github.com/your-repo/obsidian-claude-agent.git
-   cd obsidian-claude-agent
-   ```
+```bash
+cd /path/to/your/vault/.obsidian/plugins/
+git clone https://github.com/your-repo/obsidian-claude-code.git
+cd obsidian-claude-code
+npm install
+npm run build
+```
 
-2. Install dependencies and build:
-   ```bash
-   npm install
-   npm run build
-   ```
-
-3. Reload Obsidian and enable the plugin in Settings > Community plugins
+Reload Obsidian and enable the plugin in Settings > Community plugins.
 
 ## Configuration
 
-### Environment Variables
+### Environment Templates
 
-Configure API authentication in **Settings > Claude Agent > Environment Variables**.
+Create templates in **Settings > Claude Code > Environment Templates**:
 
 | Variable | Description |
 |----------|-------------|
@@ -67,65 +97,39 @@ ANTHROPIC_VERTEX_PROJECT_ID=your-project-id
 
 ### Tool Permissions
 
-Control which Claude Code tools are available:
+Control which tools are available:
 
 - **File Reading** - Read, Glob, Grep tools
-- **File Editing** - Edit tool for modifying existing files
-- **File Creation** - Write tool for creating new files
+- **File Editing** - Edit tool for modifying files
+- **File Creation** - Write tool for new files
 - **Search** - Grep tool for content search
 
-### System Prompt
+### UI Settings
 
-Customize the system prompt to change Claude's behavior when working with your vault.
-
-## Usage
-
-1. Click the message icon in the left ribbon, or use the command palette: "Open Claude Agent Chat"
-2. Type your message and press Enter or click Send
-3. Claude will respond and can use tools to interact with your vault files
-
-### Example Prompts
-
-- "List all markdown files in the notes folder"
-- "Read the content of my daily note"
-- "Create a new note called 'Meeting Notes' with a template"
-- "Search for all files mentioning 'project'"
-- "Update the TODO section in my README"
-
-## Session Management
-
-- Click the session dropdown to switch between conversations
-- Click "+" to start a new session
-- Sessions are persisted locally in your vault
+- **Show Tool Results** - Display tool execution details
+- **Auto-scroll** - Scroll to newest message
+- **Chat Font Size** - Adjust message font size (12-20px)
 
 ## Troubleshooting
 
 ### Claude Code not found
 
-If you see path-related errors, manually set `CLAUDE_CODE_PATH` in environment variables:
-
 ```bash
-# Find Claude Code location
-which claude
+which claude  # Find the path
 ```
 
-Add the result as the value for `CLAUDE_CODE_PATH`.
+Add the result as `CLAUDE_CODE_PATH` in your environment template.
 
 ### API Key Issues
 
-Ensure `ANTHROPIC_API_KEY` is set correctly in the environment variables section. The key should start with `sk-ant-`.
+Ensure `ANTHROPIC_API_KEY` starts with `sk-ant-`.
 
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Build for development (with watch mode)
-npm run dev
-
-# Build for production
-npm run build
+npm install      # Install dependencies
+npm run dev      # Development build with watch
+npm run build    # Production build
 ```
 
 ## License

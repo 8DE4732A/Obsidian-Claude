@@ -1,10 +1,39 @@
 import React, { useState } from 'react';
-import { ChatMessage } from '../../types';
+import { ChatMessage, EditorContext } from '../../types';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface MessageItemProps {
     message: ChatMessage;
     showToolResults: boolean;
 }
+
+// Context indicator component for displaying editor context
+const MessageContextIndicator: React.FC<{ context: EditorContext }> = ({ context }) => {
+    if (!context.activeFile) return null;
+
+    const fileName = context.activeFile.split('/').pop() || context.activeFile;
+    const hasSelection = context.selectionStart !== null && context.selectionEnd !== null;
+    const selectionText = hasSelection
+        ? context.selectionStart === context.selectionEnd
+            ? `Line ${context.selectionStart}`
+            : `Lines ${context.selectionStart}-${context.selectionEnd}`
+        : null;
+
+    return (
+        <div className="message-context-indicator">
+            <span className="message-context-file" title={context.activeFile}>
+                <span className="message-context-icon">📄</span>
+                {fileName}
+            </span>
+            {selectionText && (
+                <span className="message-context-selection" title={context.selectedText || ''}>
+                    <span className="message-context-icon">📝</span>
+                    {selectionText}
+                </span>
+            )}
+        </div>
+    );
+};
 
 export const MessageItem: React.FC<MessageItemProps> = ({ message, showToolResults }) => {
     const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set());
@@ -37,8 +66,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, showToolResul
                 <span className="message-timestamp">{formatTimestamp(message.timestamp)}</span>
             </div>
             <div className="message-content">
-                {message.content}
+                <MarkdownRenderer content={message.content} />
             </div>
+            {/* Show editor context for user messages */}
+            {message.role === 'user' && message.editorContext && (
+                <MessageContextIndicator context={message.editorContext} />
+            )}
             {showToolResults && message.toolResults && message.toolResults.length > 0 && (
                 <div className="tool-results">
                     {message.toolResults.map((result, index) => (

@@ -1,8 +1,11 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type ClaudeAgentPlugin from '../main';
+import { EnvTemplate, EnvVariable } from './SettingsSchema';
+import { v4 as uuidv4 } from 'uuid';
 
 export class ClaudeAgentSettingsTab extends PluginSettingTab {
     plugin: ClaudeAgentPlugin;
+    private expandedTemplateId: string | null = null;
 
     constructor(app: App, plugin: ClaudeAgentPlugin) {
         super(app, plugin);
@@ -13,13 +16,16 @@ export class ClaudeAgentSettingsTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
+        // Migrate legacy envVariables to template if needed
+        this.migrateLegacyEnvVariables();
+
         // Header
         containerEl.createEl('h1', { text: 'Claude Code Settings' });
 
-        // Environment Variables Section
-        containerEl.createEl('h2', { text: 'Environment Variables' });
+        // Environment Templates Section
+        containerEl.createEl('h2', { text: 'Environment Templates' });
         containerEl.createEl('p', {
-            text: 'Configure environment variables for Claude Code. Common variables:',
+            text: 'Configure multiple environment variable templates. Switch between them in the chat interface.',
             cls: 'setting-item-description'
         });
 
@@ -27,24 +33,35 @@ export class ClaudeAgentSettingsTab extends PluginSettingTab {
         const helpList = containerEl.createEl('ul', { cls: 'setting-item-description env-help-list' });
         helpList.createEl('li', { text: 'ANTHROPIC_API_KEY - Your Anthropic API key' });
         helpList.createEl('li', { text: 'CLAUDE_MODEL - Model to use (e.g., claude-sonnet-4-5-20250929)' });
-        helpList.createEl('li', { text: 'CLAUDE_CODE_PATH - Path to Claude Code executable' });
         helpList.createEl('li', { text: 'CLAUDE_CODE_USE_BEDROCK=1 - Use Amazon Bedrock' });
         helpList.createEl('li', { text: 'CLAUDE_CODE_USE_VERTEX=1 - Use Google Vertex AI' });
 
-        // Container for environment variables list
-        const envVarsContainer = containerEl.createDiv({ cls: 'env-vars-container' });
-        this.renderEnvVariables(envVarsContainer);
+        // Templates container
+        const templatesContainer = containerEl.createDiv({ cls: 'env-templates-container' });
+        this.renderTemplates(templatesContainer);
 
-        // Add new environment variable button
+        // Add new template button
         new Setting(containerEl)
-            .setName('Add Environment Variable')
-            .setDesc('Add a new key-value pair')
+            .setName('Add Template')
+            .setDesc('Create a new environment variable template')
             .addButton(button => button
-                .setButtonText('+ Add Variable')
+                .setButtonText('+ New Template')
                 .onClick(async () => {
-                    this.plugin.settings.envVariables.push({ key: '', value: '' });
+                    const newTemplate: EnvTemplate = {
+                        id: uuidv4(),
+                        name: `Template ${this.plugin.settings.envTemplates.length + 1}`,
+                        envVariables: []
+                    };
+                    this.plugin.settings.envTemplates.push(newTemplate);
+
+                    // If this is the first template, set it as active
+                    if (this.plugin.settings.envTemplates.length === 1) {
+                        this.plugin.settings.activeTemplateId = newTemplate.id;
+                    }
+
+                    this.expandedTemplateId = newTemplate.id;
                     await this.plugin.saveSettings();
-                    this.renderEnvVariables(envVarsContainer);
+                    this.renderTemplates(templatesContainer);
                 })
             );
 
@@ -142,6 +159,21 @@ export class ClaudeAgentSettingsTab extends PluginSettingTab {
                 })
             );
 
+        new Setting(containerEl)
+            .setName('Chat Font Size')
+            .setDesc(`Adjust the font size of chat messages (${this.plugin.settings.chatFontSize}px)`)
+            .addSlider(slider => slider
+                .setLimits(12, 20, 1)
+                .setValue(this.plugin.settings.chatFontSize)
+                .setDynamicTooltip()
+                .onChange(async (value) => {
+                    this.plugin.settings.chatFontSize = value;
+                    await this.plugin.saveSettings();
+                    // Update the description to show current value
+                    this.display();
+                })
+            );
+
         // Session Settings Section
         containerEl.createEl('h2', { text: 'Session Settings' });
 
@@ -160,64 +192,209 @@ export class ClaudeAgentSettingsTab extends PluginSettingTab {
     }
 
     /**
-     * Render the environment variables list
+     * Migrate legacy envVariables to a default template
      */
-    private renderEnvVariables(container: HTMLElement): void {
+    private async migrateLegacyEnvVariables(): Promise<void> {
+        if (this.plugin.settings.envVariables.length > 0 &&
+            this.plugin.settings.envTemplates.length === 0) {
+            // Create a default template from legacy variables
+            const defaultTemplate: EnvTemplate = {
+                id: uuidv4(),
+                name: 'Default',
+                envVariables: [...this.plugin.settings.envVariables]
+            };
+            this.plugin.settings.envTemplates.push(defaultTemplate);
+            this.plugin.settings.activeTemplateId = defaultTemplate.id;
+            this.plugin.settings.envVariables = []; // Clear legacy
+            await this.plugin.saveSettings();
+        }
+    }
+
+    /**
+     * Render the templates list
+     */
+    private renderTemplates(container: HTMLElement): void {
         container.empty();
 
-        if (this.plugin.settings.envVariables.length === 0) {
+        if (this.plugin.settings.envTemplates.length === 0) {
             container.createEl('p', {
-                text: 'No environment variables configured. Add ANTHROPIC_API_KEY to get started.',
+                text: 'No templates configured. Create a template to add environment variables.',
                 cls: 'setting-item-description'
             });
             return;
         }
 
-        this.plugin.settings.envVariables.forEach((envVar, index) => {
-            const envSetting = new Setting(container)
-                .setClass('env-var-item');
+        this.plugin.settings.envTemplates.forEach((template) => {
+            const isActive = template.id === this.plugin.settings.activeTemplateId;
+            const isExpanded = template.id === this.expandedTemplateId;
 
-            // Key input
-            envSetting.addText(text => {
-                text
-                    .setPlaceholder('KEY')
-                    .setValue(envVar.key)
-                    .onChange(async (value) => {
-                        this.plugin.settings.envVariables[index].key = value;
-                        await this.plugin.saveSettings();
-                    });
-                text.inputEl.style.width = '180px';
-                text.inputEl.style.fontFamily = 'monospace';
+            const templateDiv = container.createDiv({
+                cls: `env-template-item ${isActive ? 'active' : ''} ${isExpanded ? 'expanded' : ''}`
             });
 
-            // Value input
-            envSetting.addText(text => {
-                text
-                    .setPlaceholder('value')
-                    .setValue(envVar.value)
-                    .onChange(async (value) => {
-                        this.plugin.settings.envVariables[index].value = value;
-                        await this.plugin.saveSettings();
-                    });
-                text.inputEl.style.width = '200px';
-                // Hide sensitive values
-                if (envVar.key.toLowerCase().includes('key') ||
-                    envVar.key.toLowerCase().includes('secret') ||
-                    envVar.key.toLowerCase().includes('token')) {
-                    text.inputEl.type = 'password';
-                }
+            // Template header
+            const headerDiv = templateDiv.createDiv({ cls: 'env-template-header' });
+
+            // Active indicator and name
+            const titleDiv = headerDiv.createDiv({ cls: 'env-template-title' });
+            if (isActive) {
+                titleDiv.createSpan({ text: '✓ ', cls: 'env-template-active-icon' });
+            }
+
+            // Editable name
+            const nameInput = titleDiv.createEl('input', {
+                type: 'text',
+                value: template.name,
+                cls: 'env-template-name-input'
+            });
+            nameInput.addEventListener('change', async (e) => {
+                template.name = (e.target as HTMLInputElement).value;
+                await this.plugin.saveSettings();
+            });
+            nameInput.addEventListener('click', (e) => e.stopPropagation());
+
+            // Var count badge
+            titleDiv.createSpan({
+                text: `(${template.envVariables.length} vars)`,
+                cls: 'env-template-var-count'
+            });
+
+            // Action buttons
+            const actionsDiv = headerDiv.createDiv({ cls: 'env-template-actions' });
+
+            // Set as active button (if not active)
+            if (!isActive) {
+                const activateBtn = actionsDiv.createEl('button', {
+                    text: 'Use',
+                    cls: 'env-template-btn activate'
+                });
+                activateBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    this.plugin.settings.activeTemplateId = template.id;
+                    await this.plugin.saveSettings();
+                    this.renderTemplates(container);
+                });
+            }
+
+            // Expand/collapse button
+            const expandBtn = actionsDiv.createEl('button', {
+                text: isExpanded ? '▼' : '▶',
+                cls: 'env-template-btn expand'
+            });
+            expandBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.expandedTemplateId = isExpanded ? null : template.id;
+                this.renderTemplates(container);
             });
 
             // Delete button
-            envSetting.addButton(button => button
-                .setIcon('trash')
-                .setTooltip('Delete')
-                .onClick(async () => {
-                    this.plugin.settings.envVariables.splice(index, 1);
+            const deleteBtn = actionsDiv.createEl('button', {
+                text: '×',
+                cls: 'env-template-btn delete'
+            });
+            deleteBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const index = this.plugin.settings.envTemplates.findIndex(t => t.id === template.id);
+                if (index > -1) {
+                    this.plugin.settings.envTemplates.splice(index, 1);
+
+                    // If deleted active template, set another as active
+                    if (isActive && this.plugin.settings.envTemplates.length > 0) {
+                        this.plugin.settings.activeTemplateId = this.plugin.settings.envTemplates[0].id;
+                    } else if (this.plugin.settings.envTemplates.length === 0) {
+                        this.plugin.settings.activeTemplateId = null;
+                    }
+
+                    if (this.expandedTemplateId === template.id) {
+                        this.expandedTemplateId = null;
+                    }
+
                     await this.plugin.saveSettings();
-                    this.renderEnvVariables(container);
-                })
-            );
+                    this.renderTemplates(container);
+                }
+            });
+
+            // Expanded content - environment variables
+            if (isExpanded) {
+                const contentDiv = templateDiv.createDiv({ cls: 'env-template-content' });
+                this.renderEnvVariables(contentDiv, template);
+
+                // Add variable button
+                const addVarBtn = contentDiv.createEl('button', {
+                    text: '+ Add Variable',
+                    cls: 'env-template-add-var-btn'
+                });
+                addVarBtn.addEventListener('click', async () => {
+                    template.envVariables.push({ key: '', value: '' });
+                    await this.plugin.saveSettings();
+                    this.renderTemplates(container);
+                });
+            }
         });
+    }
+
+    /**
+     * Render the environment variables for a template
+     */
+    private renderEnvVariables(container: HTMLElement, template: EnvTemplate): void {
+        if (template.envVariables.length === 0) {
+            container.createEl('p', {
+                text: 'No variables in this template.',
+                cls: 'setting-item-description'
+            });
+            return;
+        }
+
+        const varsContainer = container.createDiv({ cls: 'env-vars-list' });
+
+        template.envVariables.forEach((envVar, index) => {
+            const varDiv = varsContainer.createDiv({ cls: 'env-var-row' });
+
+            // Key input
+            const keyInput = varDiv.createEl('input', {
+                type: 'text',
+                placeholder: 'KEY',
+                value: envVar.key,
+                cls: 'env-var-key'
+            });
+            keyInput.addEventListener('change', async (e) => {
+                template.envVariables[index].key = (e.target as HTMLInputElement).value;
+                await this.plugin.saveSettings();
+            });
+
+            // Value input
+            const valueInput = varDiv.createEl('input', {
+                type: this.shouldHideValue(envVar.key) ? 'password' : 'text',
+                placeholder: 'value',
+                value: envVar.value,
+                cls: 'env-var-value'
+            });
+            valueInput.addEventListener('change', async (e) => {
+                template.envVariables[index].value = (e.target as HTMLInputElement).value;
+                await this.plugin.saveSettings();
+            });
+
+            // Delete button
+            const deleteBtn = varDiv.createEl('button', {
+                text: '×',
+                cls: 'env-var-delete'
+            });
+            deleteBtn.addEventListener('click', async () => {
+                template.envVariables.splice(index, 1);
+                await this.plugin.saveSettings();
+                this.renderTemplates(container.parentElement!.parentElement!);
+            });
+        });
+    }
+
+    /**
+     * Check if value should be hidden (password field)
+     */
+    private shouldHideValue(key: string): boolean {
+        const lowerKey = key.toLowerCase();
+        return lowerKey.includes('key') ||
+               lowerKey.includes('secret') ||
+               lowerKey.includes('token') ||
+               lowerKey.includes('password');
     }
 }

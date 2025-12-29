@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChatSession } from '../../types';
+import { ChatSession, UsageStats } from '../../types';
 
 interface SessionSelectorProps {
     sessions: ChatSession[];
@@ -8,6 +8,18 @@ interface SessionSelectorProps {
     onNewSession: () => void;
     onDeleteSession: (id: string) => void;
 }
+
+// Format usage stats for display
+const formatUsage = (usage: UsageStats | undefined): string => {
+    if (!usage || usage.totalTokens === 0) return '';
+    const tokens = usage.totalTokens >= 1000
+        ? `${(usage.totalTokens / 1000).toFixed(1)}k`
+        : `${usage.totalTokens}`;
+    const cost = usage.estimatedCost >= 0.01
+        ? `$${usage.estimatedCost.toFixed(2)}`
+        : `$${usage.estimatedCost.toFixed(4)}`;
+    return `${tokens} tokens · ${cost}`;
+};
 
 export const SessionSelector: React.FC<SessionSelectorProps> = ({
     sessions,
@@ -72,23 +84,31 @@ export const SessionSelector: React.FC<SessionSelectorProps> = ({
 
     return (
         <div className="session-selector" ref={dropdownRef}>
-            <button
-                className="session-selector-button"
-                onClick={() => setIsOpen(!isOpen)}
-            >
-                <span className="session-title">
-                    {currentSession?.title || 'Select Session'}
-                </span>
-                <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
-            </button>
+            <div className="session-selector-header">
+                <button
+                    className="session-selector-button"
+                    onClick={() => setIsOpen(!isOpen)}
+                >
+                    <span className="session-title">
+                        {currentSession?.title || 'Select Session'}
+                    </span>
+                    <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
+                </button>
 
-            <button
-                className="new-session-button"
-                onClick={onNewSession}
-                title="New Session"
-            >
-                +
-            </button>
+                <button
+                    className="new-session-button"
+                    onClick={onNewSession}
+                    title="New Session"
+                >
+                    +
+                </button>
+            </div>
+
+            {currentSession?.usage && currentSession.usage.totalTokens > 0 && (
+                <div className="session-usage-stats">
+                    {formatUsage(currentSession.usage)}
+                </div>
+            )}
 
             {isOpen && (
                 <div className="session-dropdown">
