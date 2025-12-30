@@ -1340,3 +1340,136 @@
     font-size: 10px;
     flex-shrink: 0;
 }
+
+/* File Access Restrictions Styles */
+.file-access-help {
+    margin: 8px 0 12px 0;
+    padding: 10px 12px;
+    background: var(--background-secondary);
+    border-radius: 6px;
+    border-left: 3px solid var(--interactive-accent);
+}
+
+.file-access-help p {
+    margin: 0 0 6px 0;
+    font-weight: 500;
+    color: var(--text-normal);
+}
+
+.file-access-help ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.file-access-help li {
+    margin: 3px 0;
+    font-family: var(--font-monospace);
+    color: var(--text-muted);
+}
+
+.deny-rules-container {
+    margin: 8px 0;
+    min-height: 40px;
+}
+
+.deny-rules-empty {
+    padding: 12px;
+    text-align: center;
+    background: var(--background-secondary);
+    border-radius: 6px;
+    border: 1px dashed var(--background-modifier-border);
+    color: var(--text-muted);
+}
+
+.deny-rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.deny-rule-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+}
+
+.deny-rule-item:hover {
+    border-color: var(--background-modifier-border-hover);
+}
+
+.deny-rule-pattern {
+    font-family: var(--font-monospace);
+    font-size: 13px;
+    color: var(--text-normal);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.deny-rule-delete-btn {
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.deny-rule-delete-btn:hover {
+    opacity: 1;
+    color: var(--text-error);
+}
+
+.add-deny-rule {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.deny-rule-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    font-family: var(--font-monospace);
+    font-size: 13px;
+    color: var(--text-normal);
+}
+
+.deny-rule-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px rgba(var(--interactive-accent-rgb), 0.2);
+}
+
+.deny-rule-input::placeholder {
+    color: var(--text-muted);
+    font-family: inherit;
+}
+
+.deny-rule-add-btn {
+    padding: 8px 16px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.deny-rule-add-btn:hover {
+    background: var(--interactive-accent-hover);
+}
